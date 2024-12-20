@@ -1,0 +1,12 @@
+.env
+api/model/*
+stable-diffusion-webui-forge/*
+result/*
+test.py
+DiffusionData/*
+images/*
+networks/*
+__pycache__
+api/token/token.json
+tmp/*
+api/*

@@ -1,0 +1,10 @@
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch
+git+https://github.com/huggingface/diffusers.git@edea577
+transformers
+safetensors
+accelerate
+python-dotenv
+discord
+fastapi
+uvicorn
