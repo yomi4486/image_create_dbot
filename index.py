@@ -1,17 +1,20 @@
 import os
 import discord
-from translate import Translator
+from googletrans import Translator
 from os.path import join, dirname
 from dotenv import load_dotenv
 import uuid
 import json
 import promptOptimize
 import requests,base64
+import aiohttp
 from io import BytesIO
 # Discord.pyからクライアントインスタンスを作成するよおおおおおおおおおおお
 client = discord.Client(intents = discord.Intents.all())
 intents = discord.Intents.default()
 intents.message_content = True
+
+translator = Translator()
 
 # 環境変数の設定だよおおおおおうへへへへへへｗｗｗｗｗ
 load_dotenv(verbose=True)
@@ -53,8 +56,7 @@ async def on_message(message:discord.Message):
             return
         #プロンプトからメンションのテキスト(<@12345678>みたいなやつ)と、メンションの後に自動で入るスペースを取り除く（画像を生成中ですって送るときに変なスペースができて気持ち悪いから）
         JPprompt = message.content.replace(f'<@{APPLICATION_ID}> ', f'<@{APPLICATION_ID}>').replace(f'<@{APPLICATION_ID}>', '')
-        native_prompt = JPprompt
-        msg = await message.channel.send(f'「{native_prompt}」の画像を生成中です…')
+        msg = await message.channel.send(f'「{JPprompt}」の画像を生成中です…')
         # 送信されたメッセージがメンションのみだった場合は処理を行わず、Botの説明を軽く行う
         if not JPprompt.replace(' ', '').replace('　', '') == '':
             if len(JPprompt) > 499:
@@ -66,12 +68,10 @@ async def on_message(message:discord.Message):
                 JPprompt = JPprompt + ',anime,waifu:1.2'
                 mode = 1
             
-            JPprompt = promptOptimize.optimize(JPprompt)
+            JPprompt = promptOptimize.optimize(JPprompt.lower())
             # 正確性が増すので英語に翻訳してからプロンプトに突っ込む
-            translator = Translator(from_lang = "ja", to_lang = "en")
-            prompt = translator.translate(JPprompt)
-            if ("/" in prompt):
-                prompt = JPprompt
+
+            prompt = translator.translate(JPprompt).text # 翻訳先の言語はデフォルトで英語
             # プロンプトはコンマで区切ったほうがいいので、コンマが使われていないプロンプトの場合はスペースをコンマに置き換える
 
             if not "," in prompt:
@@ -102,8 +102,14 @@ async def on_message(message:discord.Message):
                 os.remove(f".\\result\\{filename}.png")
             else:
                 try:
-                    response = requests.get(url=f'http://192.168.255.186:9876/image?token={message.author.id}&prompt={prompt}&step=50')
-                    await message.reply(file=discord.File(BytesIO(response.content),"result.png"))
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(f'http://192.168.255.186:9876/image?token={message.author.id}&prompt={prompt}&step=90') as response:
+                            if response.status == 200:
+                                image_data = await response.read()
+                                await message.reply(file=discord.File(BytesIO(image_data), "result.png"))
+                            else:
+                                await message.reply(f"生成に失敗しました！\n```\n{response.status}\n```")
+                                return
                 except Exception as e:
                     print(e)
                     await message.reply(f"生成に失敗しました！\n```\n{e}\n```")
