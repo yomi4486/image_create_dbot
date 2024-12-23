@@ -56,7 +56,7 @@ async def on_message(message:discord.Message):
             return
         #プロンプトからメンションのテキスト(<@12345678>みたいなやつ)と、メンションの後に自動で入るスペースを取り除く（画像を生成中ですって送るときに変なスペースができて気持ち悪いから）
         JPprompt = message.content.replace(f'<@{APPLICATION_ID}> ', f'<@{APPLICATION_ID}>').replace(f'<@{APPLICATION_ID}>', '')
-        msg = await message.channel.send(f'「{JPprompt}」の画像を生成中です…')
+        msg = await message.channel.send(f'画像を生成中です…')
         # 送信されたメッセージがメンションのみだった場合は処理を行わず、Botの説明を軽く行う
         if not JPprompt.replace(' ', '').replace('　', '') == '':
             if len(JPprompt) > 499:
@@ -71,7 +71,7 @@ async def on_message(message:discord.Message):
             JPprompt = promptOptimize.optimize(JPprompt.lower())
             # 正確性が増すので英語に翻訳してからプロンプトに突っ込む
 
-            prompt = translator.translate(JPprompt).text # 翻訳先の言語はデフォルトで英語
+            prompt:str = translator.translate(JPprompt).text # 翻訳先の言語はデフォルトで英語
             # プロンプトはコンマで区切ったほうがいいので、コンマが使われていないプロンプトの場合はスペースをコンマに置き換える
 
             if not "," in prompt:
@@ -106,6 +106,7 @@ async def on_message(message:discord.Message):
                         async with session.get(f'http://192.168.255.186:9876/image?token={message.author.id}&prompt={prompt}&step=90') as response:
                             if response.status == 200:
                                 image_data = await response.read()
+                                await msg.delete()
                                 await message.reply(file=discord.File(BytesIO(image_data), "result.png"))
                             else:
                                 await message.reply(f"生成に失敗しました！\n```\n{response.status}\n```")
